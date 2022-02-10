@@ -5,14 +5,14 @@
 #define _USE_MATH_DEFINES
 #define n 10000000
 int main() {
-    double sum = 0;
-    double *sin_m = (double*)malloc(sizeof(double) * n);
+    float sum = 0;
+    float *sin_m = (float*)malloc(sizeof(float) * n);
     #pragma acc kernels
     {
     #pragma acc data copyin(sin_m)
     {
     for(int i = 0; i < n; i++){
-        sin_m[i] = sin(i*2*M_PI/(double)n);
+        sin_m[i] = sinf(i*2*M_PI/(float)n);
     }
 }
 }
