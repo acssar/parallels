@@ -32,7 +32,6 @@ int main() {
     double err = 1;
 
     //interpolation
-#pragma acc kernels
     for (int k = 1; k < N - 1; k++) {
         u[k][0] = 10 + step * k;
         u[0][k] = 10 + step * k;
@@ -45,21 +44,20 @@ int main() {
 
     }
 
-#pragma acc data copy(u[0:N][0:N], err) create (up[0:N][0:N])
+#pragma acc data copy(u[0:N][0:N]) create (up[0:N][0:N], err)
     {
-        while (err > 0.000001 && it_num < 101) {
+        while (err > 0.000001 && it_num < 10000) {
 
             it_num++;
-            if(it_num % 100 == 0 ){
-#pragma acc kernels async
-                err = 0;
-            }
-#pragma acc data present(u, up)
-#pragma acc parallel num_gangs(128) async
-            {
-                if(it_num % 100 == 0){
+           // if(it_num % 100 == 0 ){
+#pragma acc kernels async(1)
+	    {    
+	    	err = 0;
+            if (it_num % 100 == 0 || it_num == 1) {
+#pragma acc loop independent collapse(2) reduction(max:err)
 
-#pragma acc loop collapse(2) independent reduction(max:err)
+            
+                
                     for (int i = 1; i < N - 1; i++) {
 
                         for (int j = 1; j < N - 1; j++) {
@@ -69,19 +67,18 @@ int main() {
                         }
                     }
                 }
-                else{
-#pragma acc loop collapse(2)
+	    else{
+#pragma acc loop independent collapse(2)
 
                     for (int i = 1; i < N - 1; i++) {
                         for (int j = 1; j < N - 1; j++) {
 
                             up[i][j] = 0.25 * (u[i + 1][j] + u[i - 1][j] + u[i][j - 1] + u[i][j + 1]);
                         }
-                    }
-
-                }
-            }
-#pragma acc parallel loop independent collapse(2) async
+                    }		    
+	    }
+	    }
+#pragma acc parallel loop independent collapse(2) async(1)                
             for (int i = 1; i < N - 1; i++) {
                 for (int j = 1; j < N - 1; j++) {
 
@@ -89,11 +86,11 @@ int main() {
                 }
             }
 
-            if(it_num % 100 == 0 ){
-#pragma acc wait
+            if(it_num % 100 == 0 || it_num == 1 )
+#pragma acc wait(1)
 #pragma acc update self(err)
                 printf("%d %e\n", it_num, err);
-            }
+            
 
 
         }
@@ -102,7 +99,3 @@ int main() {
 
     return 0;
 }
-
-
-
-
